@@ -1,0 +1,174 @@
+#!/usr/bin/env python3
+
+import os
+import sys
+import getopt
+import subprocess
+from config import MYSQL_USERNAME, MYSQL_PASSWORD, MYSQL_HOST, MYSQL_PORT
+from profile import *
+from ColorBoard import colorize
+
+password = f'-p{MYSQL_PASSWORD}'
+
+if MYSQL_PASSWORD == '':
+	password = ''
+
+login = f'mysql -u{MYSQL_USERNAME} {password} -h{MYSQL_HOST} -P{MYSQL_PORT}'
+title = f"{APP_NAME} {colorize(APP_VERSION, 'okgreen')} {RELEASE_DATE}"
+
+# Main entry into the application
+def main():
+	"""
+	Run provided command
+	
+	OUTPUT: void
+	"""
+	unix_options = 'hv'
+	gnu_options = ['help', 'version']
+	all_arguments = sys.argv[1:]
+	
+	try:
+		options, arguments = getopt.getopt(all_arguments, unix_options, gnu_options)
+	except getopt.GetoptError as err:
+		error(str(err))
+	
+	# If no argument is given, call 'help'
+	if len(all_arguments) == 0:
+		help()
+	
+	# If options are given, examine it
+	for current_argument, current_value in options:
+		if current_argument in ('-h', '--help'):
+			help()
+			
+		if current_argument in ('-v', '--version'):
+			version()
+
+	# If argument is 'start' and no option is not given
+	if len(options) == 0 and len(arguments) > 0 and arguments[0] == 'start':
+		handle()
+		
+	error(f'Command "{all_arguments[0]}" not defined.')
+
+# Spit out error
+def error(string):
+	"""
+	Print an error to console with red background
+	
+	OUTPUT: string
+	"""
+	
+	print(colorize(string, 'bgred'))
+	
+	sys.exit(2)
+
+
+# Display help message
+def help():
+	"""
+	Display help on command usage
+	
+	OUTPUT: string
+	"""
+	directory = os.path.dirname(os.path.realpath(__file__))
+	
+	with open(f'{directory}/../fig.txt') as file:
+		string = file.read()
+	
+	string += '\n'
+	
+	string += f"{title}\n\n"
+	
+	string += colorize('Description:', 'yellow')
+	string += '\n  Command must be ran inside the directory containing the .sql files.'
+	
+	string += '\n\n'
+	
+	string += colorize('Usage:', 'yellow')
+	string += '\n  command [options] [arguements]'
+	
+	string += '\n\n'
+	
+	string += colorize('Options:', 'yellow')
+	string += '\n  '
+	string += colorize('-h, --help', 'okgreen') + '\t\tDisplay this help message.'
+	string += '\n  '
+	string += colorize('-v, --version', 'okgreen') + '\t\tDisplay the version of the tool.'
+	
+	string += '\n\n'
+	
+	string += colorize('Available Commands:', 'yellow')
+	string += '\n  '
+	string += colorize('start', 'okgreen') + '\t\tCreates databases and restores dump files'
+	
+	print(string)
+	
+	sys.exit(2)
+
+
+# Display version
+def version():
+	print(title)
+	sys.exit()
+
+
+def handle():
+	"""
+	Handle database creation and dump restoration
+	
+	OUTPUT: 
+	"""
+	print(colorize(f'{APP_NAME} starting...', 'okblue'))
+	
+	dumps = os.listdir('./')
+	dumps = [x for x in dumps if x.endswith('.sql')]
+	x = 1
+
+	if len(dumps) < 1:
+		error('No dump files found!')
+
+	for dump in dumps:
+		create_and_restore(dump, position=x, total=len(dumps))
+
+		x += 1
+		print('\n')
+	
+	print(colorize('Process done!', 'okblue'))
+	
+	sys.exit(2)
+
+
+def create_and_restore(dump, position, total):
+	"""
+	Create database (name is derived from the name of the dump file provided)
+	Database creation is skipped if Database exists.
+	SQL dump file is imported into database.
+	
+	INPUT: dump -- SQL dump file
+	INPUT: position -- nth position in the dumps list
+	INPUT: total -- total number of dumps
+	"""
+	database = dump.replace('.sql', '')
+	
+	print(f'{position} of {total} : {database}')
+
+	# Create commands
+	database_command = f'{login} -e "CREATE DATABASE IF NOT EXISTS {database}"'
+	import_command = f'{login} {database} < {dump}'
+	full_command = f'{database_command} && {import_command}'
+
+	# Execute commands
+	if subprocess.run([full_command], shell=True).returncode != 0:
+	    print(f'✘ Error occured while creating {database} or importing {dump}.')
+	else:
+	    print(f'✔ {database} created and {dump} imported!')
+	
+	sys.exit(2)
+
+
+# def update():
+	# todo
+
+if __name__ == '__main__':
+	main()
+

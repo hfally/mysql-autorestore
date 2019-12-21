@@ -1,0 +1,3 @@
+APP_NAME='Mysql Autorestore'
+APP_VERSION='1.0.0'
+RELEASE_DATE='2019-12-21 06:44'

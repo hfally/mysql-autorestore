@@ -162,8 +162,6 @@ def create_and_restore(dump, position, total):
 	    print(f'✘ Error occured while creating {database} or importing {dump}.')
 	else:
 	    print(f'✔ {database} created and {dump} imported!')
-	
-	sys.exit(2)
 
 
 # def update():
